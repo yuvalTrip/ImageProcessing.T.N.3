@@ -150,10 +150,10 @@ def main():
     # hierarchicalkDemo(img_path)
     # compareLK(img_path)
     #
-    # imageWarpingDemo(img_path)
+    imageWarpingDemo(img_path)
     #
     #pyrGaussianDemo('input/pyr_bit.jpg')#work good
-    pyrLaplacianDemo('input/pyr_bit.jpg') #work good
+    #pyrLaplacianDemo('input/pyr_bit.jpg') #work good
     #blendDemo() #work good
 
 

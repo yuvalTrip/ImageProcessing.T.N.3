@@ -13,6 +13,9 @@ def myID() -> np.int:
     :return: int
     """
     return 318916335
+# ---------------------------------------------------------------------------
+# ------------------------ Lucas Kanade optical flow ------------------------
+# ---------------------------------------------------------------------------
 
 
 def opticalFlow(im1: np.ndarray, im2: np.ndarray, step_size=10, win_size=5) -> (np.ndarray, np.ndarray):
@@ -58,54 +61,111 @@ def opticalFlow(im1: np.ndarray, im2: np.ndarray, step_size=10, win_size=5) -> (
                 local_im_flow_vector_uv = np.linalg.inv(ATAmat).dot(ATbmat)
                 # multiply by -1
                 local_im_flow_vector_uv = local_im_flow_vector_uv * (-1)
-                u_v.append(local_im_flow_vector_uv)  # add local_im_flow_vector_uv to uv array
+                u_v.append(local_im_flow_vector_uv)  # add local_im_flow_vector_uv (i.e. movement vector ) to uv array
                 original_x_y.append([j, i])  # add points location to original_points array
     # Convert to np array
     original_x_y = np.array(original_x_y)
     u_v = np.array(u_v)
     return original_x_y, u_v
 
-
-def laplaceianReduce(img: np.ndarray, levels: int = 4) -> List[np.ndarray]:
+def opticalFlowPyrLK(img1: np.ndarray, img2: np.ndarray, k: int,
+                     stepSize: int, winSize: int) -> np.ndarray:
     """
-    Creates a Laplacian pyramid for a given image
-    :param img: Original image
-    :param levels: Pyramid depth
-    :return: Laplacian Pyramid (list of images)
+    :param img1: First image
+    :param img2: Second image
+    :param k: Pyramid depth
+    :param stepSize: The image sample size
+    :param winSize: The optical flow window size (odd number)
+    :return: A 3d array, with a shape of (m, n, 2),
+    where the first channel holds U, and the second V.
     """
-    # I used the links:
-    # https://paperswithcode.com/method/laplacian-pyramid
-    # https://www.youtube.com/watch?v=D3-IK-y9UN0
-    pyramid_laplacian_list = []  # Initialize a list of all images in pyramid
-    gauss_pyr = gaussianPyr(img, levels)  # Create gaussian pyramid
-
-    gaussian = gaussianKer(5)#Cefine the kernel
-    for i in range(1, levels):
-        # Expand the image in i+1 index from pyramid_list_gaussian i.e. expands a gaussian pyramid level one step up
-        expand = gaussExpand(gauss_pyr[i], gaussian)
-        lap_im = gauss_pyr[i - 1] - expand  # Create the difference image i.e. subtraction between gaussianPyr-x-Expand gaussianPyr x + 1
-        pyramid_laplacian_list.append(lap_im)#Add the new laplacian filtered image to the pyramid
-
-    pyramid_laplacian_list.append(gauss_pyr[levels - 1])#Add the last laplacian filtered image to the pyramid
-
-    return pyramid_laplacian_list
+    pass
 
 
-def laplaceianExpand(lap_pyr: List[np.ndarray]) -> np.ndarray:
+# ---------------------------------------------------------------------------
+# ------------------------ Image Alignment & Warping ------------------------
+# ---------------------------------------------------------------------------
+def findTranslationLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     """
-    Resotrs the original image from a laplacian pyramid
-    :param lap_pyr: Laplacian Pyramid
-    :return: Original image
+    :param im1: image 1 in grayscale format.
+    :param im2: image 1 after Translation.
+    :return: Translation matrix by LK.
     """
-    gaussian = gaussianKer(5) # I did not use the same way as I defined the gaussian kernel before because it did not worked well.
-    n = len(lap_pyr) - 1
-    gauss_Pyr = lap_pyr[n]
+    # Define array of error we will use later
+    mean_errors=[]
+    # Define array of new temp values of X and Y cordinates
+    temp_cordinates=[]
+    # We will take the size of the image
+    height, width = im1.shape[:2]
+    # Get U_V array from lucas kanade
+    x_y, u_v= opticalFlow(im1 ,im2,10)
+    # For each value in u_v
+    for value in u_v:
+        # For each pixel in image
+        for i in range (1,height):
+            for j in range(1, width - 1):
+                if (i,j) in x_y:
+                    xy_tmp_new=[j+value[0],i+value[1],1]
+                    temp_cordinates.append(xy_tmp_new)
+            # # We will translate the image according to U_V values
+            # mat_after_translation=
+        # Define new matrix represent the error between first imge after translation according to specific U_V to img2
+        error_mat=x_y-temp_cordinates
+        # Compute the average error
+        average_error=error_mat.mean()
+        # Add the mean error to mean_errors array
+        mean_errors.append(average_error)
+    # From all mean errors we computed, we will select the lowes error
+    min_error=min(mean_errors)
+    # Find the index of min_error
+    result = np.where(mean_errors == min_error)
+    # Return the appropriate value of U_V (assume that min_error is unique value)
+    return u_v[result]
 
-    for i in range(n, 0, -1):
-        expand = gaussExpand(gauss_Pyr, gaussian)
-        gauss_Pyr = expand + lap_pyr[i - 1]
-    return gauss_Pyr
 
+
+def findRigidLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
+    """
+    :param im1: input image 1 in grayscale format.
+    :param im2: image 1 after Rigid.
+    :return: Rigid matrix by LK.
+    """
+    pass
+
+
+def findTranslationCorr(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
+    """
+    :param im1: input image 1 in grayscale format.
+    :param im2: image 1 after Translation.
+    :return: Translation matrix by correlation.
+    """
+    pass
+
+
+def findRigidCorr(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
+    """
+    :param im1: input image 1 in grayscale format.
+    :param im2: image 1 after Rigid.
+    :return: Rigid matrix by correlation.
+    """
+    pass
+
+
+def warpImages(im1: np.ndarray, im2: np.ndarray, T: np.ndarray) -> np.ndarray:
+    """
+    :param im1: input image 1 in grayscale format.
+    :param im2: input image 2 in grayscale format.
+    :param T: is a 3x3 matrix such that each pixel in image 2
+    is mapped under homogenous coordinates to image 1 (p2=Tp1).
+    :return: warp image 2 according to T and display both image1
+    and the wrapped version of the image2 in the same figure.
+    """
+    pass
+
+
+# ---------------------------------------------------------------------------
+# --------------------- Gaussian and Laplacian Pyramids ---------------------
+# ---------------------------------------------------------------------------
 
 def gaussianPyr(img: np.ndarray, levels: int = 4) -> List[np.ndarray]:
     """
@@ -157,26 +217,45 @@ def gaussianPyr(img: np.ndarray, levels: int = 4) -> List[np.ndarray]:
     return pyramid_list
 
 
-def gaussExpand(img: np.ndarray, gs_k: np.ndarray) -> np.ndarray:
+def laplaceianReduce(img: np.ndarray, levels: int = 4) -> List[np.ndarray]:
     """
-     Function get image in k level from gaussian pyramid and return image from gaussian pyramid in level k-1
-    :param img: Image in k level from gaussian pyramid
-           gs_k: The kernel we use for expanding
-    :return: Image from gaussian pyramid in level k-1 (i.e. the expend level)
+    Creates a Laplacian pyramid for a given image
+    :param img: Original image
+    :param levels: Pyramid depth
+    :return: Laplacian Pyramid (list of images)
     """
-    gs_k = (gs_k / gs_k.sum()) * 4 # As we learned in class
-    if img.ndim == 3:
-        hight, width, depth = img.shape[:3]
-        zero_mat = np.zeros((2 * hight, 2 * width, depth))
-    else:
-        hight, width = img.shape[:2]
-        zero_mat = np.zeros((2 * hight, 2 * width))
-    # Samples every second pixel
-    zero_mat[::2, ::2] = img
-    # Blur the image with a Gaussian kernel
-    # (by using pythons internal function 'filter2D', we will apply the gaussian_kernel on the zero padded image )
-    image = cv2.filter2D(zero_mat, -1, gs_k, cv2.BORDER_REPLICATE)
-    return image
+    # I used the links:
+    # https://paperswithcode.com/method/laplacian-pyramid
+    # https://www.youtube.com/watch?v=D3-IK-y9UN0
+    pyramid_laplacian_list = []  # Initialize a list of all images in pyramid
+    gauss_pyr = gaussianPyr(img, levels)  # Create gaussian pyramid
+
+    gaussian = gaussianKer(5)#Cefine the kernel
+    for i in range(1, levels):
+        # Expand the image in i+1 index from pyramid_list_gaussian i.e. expands a gaussian pyramid level one step up
+        expand = gaussExpand(gauss_pyr[i], gaussian)
+        lap_im = gauss_pyr[i - 1] - expand  # Create the difference image i.e. subtraction between gaussianPyr-x-Expand gaussianPyr x + 1
+        pyramid_laplacian_list.append(lap_im)#Add the new laplacian filtered image to the pyramid
+
+    pyramid_laplacian_list.append(gauss_pyr[levels - 1])#Add the last laplacian filtered image to the pyramid
+
+    return pyramid_laplacian_list
+
+
+def laplaceianExpand(lap_pyr: List[np.ndarray]) -> np.ndarray:
+    """
+    Resotrs the original image from a laplacian pyramid
+    :param lap_pyr: Laplacian Pyramid
+    :return: Original image
+    """
+    gaussian = gaussianKer(5) # I did not use the same way as I defined the gaussian kernel before because it did not worked well.
+    n = len(lap_pyr) - 1
+    gauss_Pyr = lap_pyr[n]
+
+    for i in range(n, 0, -1):
+        expand = gaussExpand(gauss_Pyr, gaussian)
+        gauss_Pyr = expand + lap_pyr[i - 1]
+    return gauss_Pyr
 
 
 def pyrBlend(img_1: np.ndarray, img_2: np.ndarray, mask: np.ndarray, levels: int) -> (np.ndarray, np.ndarray):
@@ -209,6 +288,30 @@ def pyrBlend(img_1: np.ndarray, img_2: np.ndarray, mask: np.ndarray, levels: int
 
     return naive, merge
 
+# ---------------------------------------------------------------------------
+# --------------------- Auxiliary functions  --------------------------------
+# ---------------------------------------------------------------------------
+
+def gaussExpand(img: np.ndarray, gs_k: np.ndarray) -> np.ndarray:
+    """
+     Function get image in k level from gaussian pyramid and return image from gaussian pyramid in level k-1
+    :param img: Image in k level from gaussian pyramid
+           gs_k: The kernel we use for expanding
+    :return: Image from gaussian pyramid in level k-1 (i.e. the expend level)
+    """
+    gs_k = (gs_k / gs_k.sum()) * 4 # As we learned in class
+    if img.ndim == 3:
+        hight, width, depth = img.shape[:3]
+        zero_mat = np.zeros((2 * hight, 2 * width, depth))
+    else:
+        hight, width = img.shape[:2]
+        zero_mat = np.zeros((2 * hight, 2 * width))
+    # Samples every second pixel
+    zero_mat[::2, ::2] = img
+    # Blur the image with a Gaussian kernel
+    # (by using pythons internal function 'filter2D', we will apply the gaussian_kernel on the zero padded image )
+    image = cv2.filter2D(zero_mat, -1, gs_k, cv2.BORDER_REPLICATE)
+    return image
 
 def cropSizeImage(img: np.ndarray, levels: int) -> np.ndarray:
     twoPowLevel = pow(2, levels)
