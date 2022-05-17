@@ -146,11 +146,11 @@ def main():
     print("ID:", myID())
 
     img_path = 'input/boxMan.jpg'
-    #lkDemo(img_path)#work good
+    lkDemo(img_path)#work good
     # hierarchicalkDemo(img_path)
     # compareLK(img_path)
     #
-    imageWarpingDemo(img_path)
+    #imageWarpingDemo(img_path)
     #
     #pyrGaussianDemo('input/pyr_bit.jpg')#work good
     #pyrLaplacianDemo('input/pyr_bit.jpg') #work good

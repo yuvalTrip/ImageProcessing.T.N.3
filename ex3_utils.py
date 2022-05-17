@@ -1,3 +1,4 @@
+import math
 import sys
 from typing import List
 
@@ -51,8 +52,8 @@ def opticalFlow(im1: np.ndarray, im2: np.ndarray, step_size=10, win_size=5) -> (
                                [np.sum(mat_x * mat_y), np.sum(mat_y ** 2)]])
             # Compute the eigenvalues of ATA matrix.
             lambdas = np.linalg.eigvals(ATAmat)
-            # according the condition as we learned in tirgul and written in PDF
-            if lambdas.min() > 1 and lambdas.max() / lambdas.min() < 100:
+            # according the conditions as we learned in tirgul and written in PDF
+            if lambdas.min() > 1 and lambdas.max() / lambdas.min() < 100 and lambdas.max()>=lambdas.min():
                 mat_t = I_t[i - half_win_size:i + half_win_size + 1, j - half_win_size:j + half_win_size + 1]  # compute t matrix
                 # Compute the matrix ATb=[-sigma(IxIt), -sigma(IyIt)]
                 ATbmat = np.array([-np.sum(mat_x * mat_t), -np.sum(mat_y * mat_t)])
@@ -99,28 +100,45 @@ def findTranslationLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     height, width = im1.shape[:2]
     # Get U_V array from lucas kanade
     x_y, u_v= opticalFlow(im1 ,im2,10)
+    # We will compute the cordinate of im2, i.e., the cordinate of im1 after translation
+    # np.round because u_v contains float values
+    im2_cordinate=np.round(x_y+u_v)
     # For each value in u_v
     for value in u_v:
         # For each pixel in image
         for i in range (1,height):
             for j in range(1, width - 1):
+                # If the pixel moved in LK
                 if (i,j) in x_y:
-                    xy_tmp_new=[j+value[0],i+value[1],1]
+                    xy_tmp_new=[np.round(j+value[0]),np.round(i+value[1])]
                     temp_cordinates.append(xy_tmp_new)
             # # We will translate the image according to U_V values
             # mat_after_translation=
-        # Define new matrix represent the error between first imge after translation according to specific U_V to img2
-        error_mat=x_y-temp_cordinates
+        # Define new matrix represent the error between first image after translation according to specific U_V to img2
+        error_mat=abs(im2_cordinate-temp_cordinates)
         # Compute the average error
         average_error=error_mat.mean()
         # Add the mean error to mean_errors array
         mean_errors.append(average_error)
+    # Convert to np array
+    mean_errors = np.array(mean_errors)
     # From all mean errors we computed, we will select the lowes error
     min_error=min(mean_errors)
     # Find the index of min_error
     result = np.where(mean_errors == min_error)
-    # Return the appropriate value of U_V (assume that min_error is unique value)
-    return u_v[result]
+    # Save the appropriate value of U_V (assume that min_error is unique value)
+    most_accurate_uv= u_v[result]
+    # define the translation matrix (as written here: https://en.wikipedia.org/wiki/Translation_(geometry) )
+    translation_matrix=np.zeros((3,3))
+    translation_matrix[0,0]=1
+    translation_matrix[1,1]=1
+    translation_matrix[2,2]=1 # The rest will be zeros
+    translation_matrix[0,2]=most_accurate_uv[0]
+    translation_matrix[1,2]=most_accurate_uv[1]
+    # Return the translation matrix:
+    return translation_matrix
+
+
 
 
 
@@ -130,6 +148,30 @@ def findRigidLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     :param im2: image 1 after Rigid.
     :return: Rigid matrix by LK.
     """
+    # Remember: Rigid is combination of translation and rotation
+
+    # We will take the size of the image
+    height, width = im1.shape[:2]
+    # Get U_V array from lucas kanade
+    x_y, u_v = opticalFlow(im1, im2, 10)
+    # Now we will use the formulla of Rigid Transformations as we learned:
+    # [x',y']=[[cos(teta), -sin(teta), u],[sin(teta),cos(teta),v]] *[x,y,1]
+    # For each value in u_v
+    for value in u_v:
+        # Compute the matrix:
+        # [[cos(teta), -sin(teta), u],[sin(teta),cos(teta),v]]
+        first_mat=np.array([[math.cos(teta), -math.sin(teta),value[0]],[math.sin(teta),math.cos(teta),value[1]]])
+        # For each pixel in image
+        for i in range(1, height):
+            for j in range(1, width - 1):
+        # If the pixel moved in LK
+                if(i,j) in x_y:
+                    # Compute the matrix:
+                    # [x,y,1]
+                    sec_mat=np.array([i,j,1])
+
+
+
     pass
 
 
@@ -174,15 +216,6 @@ def gaussianPyr(img: np.ndarray, levels: int = 4) -> List[np.ndarray]:
     :param levels: Pyramid depth
     :return: Gaussian pyramid (list of images)
     """
-    # img = cropPic(img, levels)
-    # pyrLst = [img]
-    # gaussian = gaussianKer(5)
-    #
-    # for i in range(1, levels):
-    #     I_temp = cv2.filter2D(pyrLst[i - 1], -1, gaussian, cv2.BORDER_REPLICATE)
-    #     I_temp = I_temp[::2, ::2]
-    #     pyrLst.append(I_temp)
-    # return pyrLst
     # I use the links:
     # https://www.youtube.com/watch?v=dW7sMgs-Ggw
     # the presentation from tirgul
