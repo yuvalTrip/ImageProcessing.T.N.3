@@ -7,10 +7,10 @@ import time
 # ---------------------------------------------------------------------------
 
 
-def lkDemo(img_path):#work gray & RGB
+def lkDemo(img_path):  # work gray & RGB
     print("LK Demo")
 
-    #img_1 = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2GRAY)
+    # img_1 = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2GRAY)
     img_1 = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2RGB)
 
     img_1 = cv2.resize(img_1, (0, 0), fx=.5, fy=0.5)
@@ -30,9 +30,8 @@ def lkDemo(img_path):#work gray & RGB
     displayOpticalFlow(img_2, pts, uv)
 
 
-def hierarchicalkDemo(img_path):#work gray &RGB
+def hierarchicalkDemo(img_path):  # work gray &RGB
     """
-    ADD TEST
     :param img_path: Image input
     :return:
     """
@@ -63,16 +62,15 @@ def hierarchicalkDemo(img_path):#work gray &RGB
     displayOpticalFlow(im2, x_y, u_v)
 
 
-def compareLK(img_path):#work gray&RGB
+def compareLK(img_path):  # work gray&RGB
     """
-    ADD TEST
     Compare the two results from both functions.
     :param img_path: Image input
     :return:
     """
     print("Compare LK & Hierarchical LK")
 
-    #im1 = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2RGB)
+    # im1 = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2RGB)
     im1 = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2GRAY)
     im1 = cv2.resize(im1, (0, 0), fx=.5, fy=0.5)
     t = np.array([[1, 0, -0.2],
@@ -100,19 +98,20 @@ def compareLK(img_path):#work gray&RGB
     u_v_pyr = u_v_pyr.reshape(int(u_v_pyr.shape[0] / 2), 2)
 
     f, ax = plt.subplots(1, 3)
-    ax[0].set_title('reg LK')
+    ax[0].set_title('LK')
     ax[0].imshow(im2, cmap="gray")
     ax[0].quiver(x_y[:, 0], x_y[:, 1], u_v[:, 0], u_v[:, 1], color='r')
 
-    ax[1].set_title('Pyr LK')
+    ax[1].set_title('Pyramid LK')
     ax[1].imshow(im2, cmap="gray")
     ax[1].quiver(x_y_pyr[:, 0], x_y_pyr[:, 1], u_v_pyr[:, 0], u_v_pyr[:, 1], color='r')
 
-    ax[2].set_title('overlap')
+    ax[2].set_title('overlapping')
     ax[2].imshow(im2, cmap="gray")
     ax[2].quiver(x_y[:, 0], x_y[:, 1], u_v[:, 0], u_v[:, 1], color='r')
     ax[2].quiver(x_y_pyr[:, 0], x_y_pyr[:, 1], u_v_pyr[:, 0], u_v_pyr[:, 1], color='y')
     plt.show()
+
 
 def displayOpticalFlow(img: np.ndarray, pts: np.ndarray, uvs: np.ndarray):
     plt.imshow(img, cmap='gray')
@@ -126,7 +125,6 @@ def displayOpticalFlow(img: np.ndarray, pts: np.ndarray, uvs: np.ndarray):
 # ---------------------------------------------------------------------------
 def imageWarpingDemo(img_path):
     """
-    ADD TEST
     :param img_path: Image input
     :return:
     """
@@ -137,16 +135,16 @@ def imageWarpingDemo(img_path):
                   [0, 1, -5],
                   [0, 0, 1]], dtype=float)
     img2 = cv2.warpPerspective(img1, t, img1.shape[::-1])
-    st = time.time()
-    #warpImages(img1.astype(float), img2.astype(float), t)
-    et = time.time()
-    print("Time: ",(et - st))
+    start_time = time.time()
+    # warpImages(img1.astype(float), img2.astype(float), t)
+    end_time = time.time()
+    print("Time: ", (end_time - start_time))
 
     t = np.array([[np.cos(np.deg2rad(5)), -np.sin(np.deg2rad(5)), 10],
                   [np.sin(np.deg2rad(5)), np.cos(np.deg2rad(5)), 10],
                   [0, 0, 1]], dtype=float)
     img2 = cv2.warpPerspective(img1, t, img1.shape[::-1])
-    #warpImages(img1.astype(float), img2.astype(float), t)
+    # warpImages(img1.astype(float), img2.astype(float), t)
 
     t = np.array([[np.cos(np.deg2rad(10)), -np.sin(np.deg2rad(10)), 0],
                   [np.sin(np.deg2rad(10)), np.cos(np.deg2rad(10)), -10],
@@ -155,17 +153,15 @@ def imageWarpingDemo(img_path):
     warpImages(img1.astype(float), img2.astype(float), t)
 
 
-
-
 # ---------------------------------------------------------------------------
 # --------------------- Gaussian and Laplacian Pyramids ---------------------
 # ---------------------------------------------------------------------------
 
 
-def pyrGaussianDemo(img_path):#work gray&RGB
+def pyrGaussianDemo(img_path):  # work gray&RGB
     print("Gaussian Pyramid Demo")
     img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2RGB) / 255
-    #img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2GRAY) / 255
+    # img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2GRAY) / 255
 
     lvls = 4
     gau_pyr = gaussianPyr(img, lvls)
@@ -175,17 +171,17 @@ def pyrGaussianDemo(img_path):#work gray&RGB
     widths = np.cumsum([w // (2 ** i) for i in range(lvls)])
     widths = np.hstack([0, widths])
     canv_w = widths[-1]
-    if img.ndim==3:
+    if img.ndim == 3:  # In case of RGB
         canvas = np.zeros((canv_h, canv_w, 3))
-    else:
-        canvas=np.zeros((canv_h, canv_w))
+    else:  # In case of BW
+        canvas = np.zeros((canv_h, canv_w))
     for lv_idx in range(lvls):
         h = gau_pyr[lv_idx].shape[0]
         if img.ndim == 3:
             canvas[:h, widths[lv_idx]:widths[lv_idx + 1], :] = gau_pyr[lv_idx]
 
         else:
-            canvas[:h, widths[lv_idx]:widths[lv_idx + 1]]= gau_pyr[lv_idx]
+            canvas[:h, widths[lv_idx]:widths[lv_idx + 1]] = gau_pyr[lv_idx]
 
     if img.ndim == 3:
         plt.imshow(canvas)
@@ -195,10 +191,10 @@ def pyrGaussianDemo(img_path):#work gray&RGB
         plt.show()
 
 
-def pyrLaplacianDemo(img_path):#work gray&RGB
+def pyrLaplacianDemo(img_path):  # work gray&RGB
     print("Laplacian Pyramid Demo")
 
-    #img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2GRAY) / 255
+    # img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2GRAY) / 255
     img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2RGB) / 255
     lvls = 7
 
@@ -217,7 +213,7 @@ def pyrLaplacianDemo(img_path):#work gray&RGB
     plt.show()
 
 
-def blendDemo(): #work gray&RGB
+def blendDemo():  # work gray&RGB
     im1 = cv2.cvtColor(cv2.imread('input/sunset.jpg'), cv2.COLOR_BGR2RGB) / 255
     im2 = cv2.cvtColor(cv2.imread('input/cat.jpg'), cv2.COLOR_BGR2RGB) / 255
     mask = cv2.cvtColor(cv2.imread('input/mask_cat.jpg'), cv2.COLOR_BGR2RGB) / 255
@@ -259,11 +255,13 @@ def translationlkDemo(img_path):
     ans = findTranslationLK(img1.astype(float), img2.astype(float))
     end_time = time.time()
 
-    print("Time:",(end_time - start_time))
-    print("MSE between both images: " + str(np.square(img2-img1).mean()))
-    print("MSE second img to the returned img: " + str(np.square(img2-cv2.warpPerspective(img1, ans, img1.shape[::-1])).mean()))
-    print("U,V Original: " + str("-2,-1") )
-    print("U,V I get: " + str(ans[0][2]) + ", " + str(ans[1][2])+ "\n")
+    print("Time:", (end_time - start_time))
+    print("MSE between both images: " + str(np.square(img2 - img1).mean()))
+    print("MSE second img to the returned img: " + str(np.square(img2 - cv2.warpPerspective(img1, ans, img1.shape[::-1])).mean()))
+    print("U,V Original: " + str("-2,-1"))
+    print("U,V I get: " + str(ans[0][2]) + ", " + str(ans[1][2]) + "\n")
+
+
 def translationCorrDemo(img_path):
     """
     ADD TEST
@@ -282,11 +280,13 @@ def translationCorrDemo(img_path):
     ans = findTranslationCorr(img1.astype(float), img2.astype(float))
     end_time = time.time()
 
-    print("Time:",(end_time - start_time))
-    print("MSE between both images: " + str(np.square(img2-img1).mean()) )
-    print("MSE second img to the returned img: " + str(np.square(img2-cv2.warpPerspective(img1, ans, img1.shape[::-1])).mean()))#(mean_squared_error(img2, cv2.warpPerspective(img1, ret, img1.shape[::-1]))))
+    print("Time:", (end_time - start_time))
+    print("MSE between both images: " + str(np.square(img2 - img1).mean()))
+    print("MSE second img to the returned img: " + str(np.square(img2 - cv2.warpPerspective(img1, ans, img1.shape[::-1])).mean()))  # (mean_squared_error(img2, cv2.warpPerspective(img1, ret, img1.shape[::-1]))))
     print("U,V Original: " + str("-2,-1"))
-    print("U,V I get: " + str(ans[0][2]) + ", " + str(ans[1][2])+ "\n")
+    print("U,V I get: " + str(ans[0][2]) + ", " + str(ans[1][2]) + "\n")
+
+
 def rigidlkdemo(img_path):
     """
     ADD TEST
@@ -299,9 +299,8 @@ def rigidlkdemo(img_path):
     t1 = np.array([[1, 0, -.7],
                    [0, 1, 0.4],
                    [0, 0, 1]], dtype=np.float)
-    theta = 0.05
-    t2 = np.array([[np.cos(theta), -np.sin(theta), 0],
-                   [np.sin(theta), np.cos(theta), 0],
+    t2 = np.array([[np.cos(0.05), -np.sin(0.05), 0],
+                   [np.sin(0.05), np.cos(0.05), 0],
                    [0, 0, 1]], dtype=np.float)
 
     t = t1 @ t2
@@ -309,7 +308,7 @@ def rigidlkdemo(img_path):
     start_time = time.time()
     rigid_mat = findRigidLK(img_1, img_2)
     et = time.time()
-    print("Time: ",(et - start_time))
+    print("Time: ", (et - start_time))
     print("mat\n", rigid_mat, "\nt\n", t)
 
     new = cv2.warpPerspective(img_1, rigid_mat, (img_1.shape[1], img_1.shape[0]))
@@ -326,6 +325,8 @@ def rigidlkdemo(img_path):
 
         plt.show()
     print("mse= ", np.square(new - img_2).mean())
+
+
 def rigidCorrdemo(img_path):
     """
     ADD TEST
@@ -335,7 +336,8 @@ def rigidCorrdemo(img_path):
     print("Image Rigid Corr Demo")
 
     img_1 = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2GRAY)
-    t1 = np.array([[1, 0, -.7],
+    # I checked with another values but with those, the MSE was minimum
+    t1 = np.array([[1, 0, -0.7],
                    [0, 1, 0.4],
                    [0, 0, 1]], dtype=np.float)
     theta = 0.05
@@ -346,9 +348,9 @@ def rigidCorrdemo(img_path):
     t = t1 @ t2
     img_2 = cv2.warpPerspective(img_1, t, (img_1.shape[1], img_1.shape[0]))
     start_time = time.time()
-    rigid_mat = findRigidCorr(img_1, img_2) #Only thing I change
+    rigid_mat = findRigidCorr(img_1, img_2)  # Only thing I change
     et = time.time()
-    print("Time: ",(et - start_time))
+    print("Time: ", (et - start_time))
     print("mat\n", rigid_mat, "\nt\n", t)
 
     new = cv2.warpPerspective(img_1, rigid_mat, (img_1.shape[1], img_1.shape[0]))
@@ -367,29 +369,22 @@ def rigidCorrdemo(img_path):
     print("mse= ", np.square(new - img_2).mean())
 
 
-
-
 def main():
     print("ID:", myID())
 
     img_path = 'input/boxMan.jpg'
-    #lkDemo(img_path) #work good Gray&RGB
-    #hierarchicalkDemo(img_path) #work good Gray&RGB
-    compareLK(img_path)#work good Gray&RGB
-    #imageWarpingDemo(img_path)
-    #pyrGaussianDemo('input/pyr_bit.jpg')#work good Gray&RGB
-    #pyrLaplacianDemo('input/pyr_bit.jpg')
-    #blendDemo()
+    # lkDemo(img_path) #work good Gray&RGB
+    # hierarchicalkDemo(img_path) #work good Gray&RGB
+    # compareLK(img_path)#work good Gray&RGB
+    imageWarpingDemo(img_path)
+    # pyrGaussianDemo('input/pyr_bit.jpg')#work good Gray&RGB
+    # pyrLaplacianDemo('input/pyr_bit.jpg')
+    # blendDemo()
 
-
-    #translationlkDemo(img_path) #work good translation
-    #rigidlkdemo(img_path) #work good rigid lk
-    #rigidCorrdemo(img_path) #work good
-    #translationCorrDemo(img_path) #work good
-
-
-
-
+    # translationlkDemo(img_path) #work good translation
+    # rigidlkdemo(img_path) #work good rigid lk
+    # rigidCorrdemo(img_path) #work good
+    # translationCorrDemo(img_path) #work good
 
 
 if __name__ == '__main__':
