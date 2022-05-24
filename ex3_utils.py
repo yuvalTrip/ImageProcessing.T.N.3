@@ -35,6 +35,10 @@ def opticalFlow(im1: np.ndarray, im2: np.ndarray, step_size=10, win_size=5) -> (
     # https://en.wikipedia.org/wiki/Lucas%E2%80%93Kanade_method
     # https://sandipanweb.wordpress.com/2018/02/25/implementing-lucas-kanade-optical-flow-algorithm-in-python/
     # https://www.youtube.com/watch?v=6wMoHgpVUn8&t=326s
+    # if im1.ndim > 2:  # In case image is RGB
+    #     im1 = cv2.cvtColor(im1, cv2.COLOR_BGR2GRAY)
+    #     im2 = cv2.cvtColor(im2, cv2.COLOR_BGR2GRAY)
+
     original_x_y = []  # Original points' location list
     u_v = []  # Change for each point in x&y axis
     half_win_size = win_size // 2  # window_size is odd(as given), all the pixels with offset in between [-w, w] are inside the window
@@ -44,7 +48,7 @@ def opticalFlow(im1: np.ndarray, im2: np.ndarray, step_size=10, win_size=5) -> (
     I_t = im2 - im1  # The derivative of I by t
     hight, width = I_x.shape[:2]
     # Move over all pixels in image, building the window,and check the pixels according to the step size.
-    for i in range(half_win_size, hight - half_win_size + 1, step_size):
+    for i in range(half_win_size, hight - half_win_size+1, step_size):
         for j in range(half_win_size, width - half_win_size + 1, step_size):
             mat_y = I_y[i - half_win_size:i + half_win_size + 1, j - half_win_size:j + half_win_size + 1]  # compute y matrix
             mat_x = I_x[i - half_win_size:i + half_win_size + 1, j - half_win_size:j + half_win_size + 1]  # compute x matrix
@@ -142,7 +146,7 @@ def findTranslationLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
 
     # Define minimal error to be the biggest int value
     minimal_error = float("inf")
-    spot = 0
+    index = 0
     # Get U_V array from lucas kanade
     x_y, u_v = opticalFlow(im1, im2, 10, 5)
     # Iterate over all the u_v we found
@@ -158,13 +162,13 @@ def findTranslationLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
         # We will find the most accurate u_v according to the smallest error
         if temp_error < minimal_error:# If temp_error is smaller than min_error
             minimal_error = temp_error # We will define the new error to be the new min_error
-            spot = x
+            index = x
             # If there is no change between both images
             if minimal_error == 0:
                 print("break-images are the same!")
                 break
-    u = u_v[spot][0]
-    v = u_v[spot][1]
+    u = u_v[index][0]
+    v = u_v[index][1]
 
     temp_translation = np.array([[1, 0, u],
                   [0, 1, v],
@@ -172,7 +176,6 @@ def findTranslationLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
 
     return temp_translation
 
-# #####MINE
 def findRigidLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     """
     :param im1: input image 1 in grayscale format.
@@ -180,66 +183,65 @@ def findRigidLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     :return: Rigid matrix by LK.
     """
 
-    # Remember: Rigid is combination of translation and rotation
-    # I used the links:
-    # http://16720.courses.cs.cmu.edu/lec/alignment_lec11.pdf
-    # presentation number 5, page number 28
-    # My algo will look like that:
-    # teta0     teta1   ....    teta359
-    # | | |     | | |           | | |
-    # uv uv uv uv uv uv        uv uv uv
-    # From that we will take the uv with the minimum mean error and the appropriate teta to be the teta,tx,ty for the rigid matrix
-
-    # Define minimal error to be the biggest int value
-    minimal_error = float("inf")
-    spot = 0
+    # # Remember: Rigid is combination of translation and rotation
+    # # I used the links:
+    # # http://16720.courses.cs.cmu.edu/lec/alignment_lec11.pdf
+    # # presentation number 5, page number 28
+    # # My algo will look like that:
+    # # teta0     teta1   ....    teta359
+    # # | | |     | | |           | | |
+    # # uv uv uv uv uv uv        uv uv uv
+    # # From that we will take the uv with the minimum mean error and the appropriate teta to be the teta,tx,ty for the rigid matrix
     # Get U_V array from lucas kanade
     x_y, u_v = opticalFlow(im1, im2, 10, 5)
+    index = 0
+    # Define minimal error to be the biggest int value
+    minimal_error = float("inf")
+    # We will take the size of the image
+    height, width = im1.shape[:2]
     # Iterate over all the u_v we found
-    for index in range(len(u_v)):
-        u = u_v[index][0]  # u value
-        v = u_v[index][1]  # v value
+    for x in range(u_v.shape[0]):
+        u = u_v[x][0] # Define u value
+        v = u_v[x][1] # Define v value
         # Now we will compute the angle between u and v according to next comuting:
         # tan(teta)=v/u  --> teta= arctan(v/u)
-        teta=0 # If denominator is 0, than the angle will be 0 too.
-        if u!=0:
+        teta = 0 # If denominator is 0, than the angle will be 0 too.
+        if u != 0:
             teta = np.arctan(v / u)
-        # Compute the matrix:
-        # [[cos(teta), -sin(teta), u],[sin(teta),cos(teta),v]]
-        temp_mat = np.array([[math.cos(teta), -math.sin(teta), u],
-                              [math.sin(teta), math.cos(teta), v],
-                              [0,0,1]],dtype=np.float)
-        # Now we will applies a perspective transformation to an im1 to temp_translation by using (im1.shape[1], im1.shape[0])-i.e. create a new image a transformation using u,v
-        newimg=cv2.warpPerspective(im1, temp_mat, (im1.shape[1], im1.shape[0]))
+        # Compute the transformation matrix:
+        # [[cos(teta), -sin(teta), u],[sin(teta),cos(teta),v],[0, 0, 1]] by using teta
+        temp_mat = np.array([[np.cos(teta), -np.sin(teta), 0],
+                      [np.sin(teta), np.cos(teta), 0],
+                      [0, 0, 1]], dtype=np.float)
+        # Now we will applies a perspective transformation to an im1 to temp_translation by using (width, height)-i.e. create a new image a transformation using u,v
+        new_img = cv2.warpPerspective(im1, temp_mat, (width, height))
         # We will compute the difference between im2 to im1 after applying the transformation
-        temp_error = ((im2 - newimg) ** 2).sum()
+        temp_error = ((im2 - new_img) ** 2).sum()
         # We will find the most accurate u_v according to the smallest error
-        if temp_error < minimal_error:  # If temp_error is smaller than min_error
-            minimal_error = temp_error  # We will define the new error to be the new min_error
-            spot = index
-            # If there is no change between both images
-            if minimal_error == 0:
-                print("break-images are the same!")
-                break
-    # with the teta we get the minimal_error we will use findtranslationLK to find the uv
-    u = u_v[index][0]  # u value
-    v = u_v[index][1]  # v value
-    # Now we will compute the angle between u and v according to next comuting:
-    # tan(teta)=v/u  --> teta= arctan(v/u)
-    teta = 0  # If denominator is 0, than the angle will be 0 too.
+        if temp_error < minimal_error:# If temp_error is smaller than min_error
+            minimal_error = temp_error # We will define the new error to be the new min_error
+            index = x
+        # If there is no change between both images
+        if minimal_error == 0:
+            break
+
+    # now we will use the teta with the smallest error to find the uv by using findtranslationLK
+    # SAME MOVES AS BEFORE
+    u = u_v[index][0]# Define u value
+    v = u_v[index][1]# Define v value
+    teta=0
     if u != 0:
         teta = np.arctan(v / u)
-    # Compute the matrix:
-    # [[cos(teta), -sin(teta), u],[sin(teta),cos(teta),v],[0,0,1]]
-    temp_mat = np.array([[math.cos(teta), -math.sin(teta), u],
-                         [math.sin(teta), math.cos(teta), v],
-                         [0, 0, 1]],dtype=np.float)
-    # Now we will applies a perspective transformation to an im1 to temp_translation by using (im1.shape[1], im1.shape[0])-i.e. create a new image a transformation using u,v
-    newimg = cv2.warpPerspective(im1, temp_mat, (im1.shape[1], im1.shape[0]))
-    mat = findTranslationLK(newimg, im2)
-    T = mat @ temp_mat
-    return (T)
+    temp_mat = np.array([[np.cos(teta), -np.sin(teta), 0],
+                  [np.sin(teta), np.cos(teta), 0],
+                  [0, 0, 1]], dtype=np.float)
+    # Now we will applies a perspective transformation to an im1 to temp_translation by using (width, height)-i.e. create a new image a transformation using u,v
+    new_img = cv2.warpPerspective(im1, temp_mat, (width, height))
 
+    translation_mat = findTranslationLK(new_img, im2)
+    # Compute the rigid matrix
+    ans = translation_mat @ temp_mat
+    return (ans)
 
 def findTranslationCorr(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     """
@@ -247,7 +249,15 @@ def findTranslationCorr(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     :param im2: image 1 after Translation.
     :return: Translation matrix by correlation.
     """
-    pass
+    # As we know, in translation the image can move up or down-i.e., f there was translation, rows or columns of zeros will appear
+    # in the new image mat
+    u=findUvalue(im2) # Find the change in X axis
+    v=findVvalue(im2) # Find the change in Y axis
+    # Put the values we found in the translation_mat
+    translation_mat = np.array([[1, 0, u],
+                                 [0, 1, v],
+                                 [0, 0, 1]], dtype=np.float)
+    return translation_mat
 
 
 def findRigidCorr(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
@@ -256,7 +266,25 @@ def findRigidCorr(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     :param im2: image 1 after Rigid.
     :return: Rigid matrix by correlation.
     """
-    pass
+    teta=findTheta(im1,im2)
+    #rigid_mat = np.array([[math.cos(t), math.sin(t), 0],
+                          # [-math.sin(t), math.cos(t), 0],
+                          # [0, 0, 1]], dtype=np.float64)
+    rigid_mat = np.array([[math.cos(teta), -math.sin(teta), 0],
+                         [math.sin(teta), math.cos(teta), 0],
+                         [0, 0, 1]], dtype=np.float)
+    # Now we will applies a perspective transformation to an im2 to rigid_mat by using im2.shape[::-1]
+    revers_img = cv2.warpPerspective(im2, rigid_mat, im2.shape[::-1])# we get translation without rigid
+    # Now we will use excactly the same algorith as we used in findTranslationCorr
+    tran_mat = findTranslationCorr(im1, revers_img)
+    u = tran_mat[0, 2]
+    v = tran_mat[1, 2]
+    ans = np.array([[math.cos(teta), -math.sin(teta), u],
+                    [math.sin(teta), math.cos(teta), v],
+                    [0, 0, 1]], dtype=np.float64)
+
+    return ans
+
 
 
 def warpImages(im1: np.ndarray, im2: np.ndarray, T: np.ndarray) -> np.ndarray:
@@ -286,60 +314,28 @@ def warpImages(im1: np.ndarray, im2: np.ndarray, T: np.ndarray) -> np.ndarray:
         T_inverse[0][1] = -np.sin(radians)
         T_inverse[1][0] = np.sin(radians)
     # Iterate over all pixels in image
-    for j in range(0, height):
-        for i in range(0, width):
+    for i in range(0, height):
+        for j in range(0, width):
             # Define array of the new coordinates [x,y,1]
-            new_coor = np.array([i, j, 1])
+            new_coor = np.array([[i],[ j], [1]])
             # We will multiply T_inverse by new_coor and get array in size of 3
             newarr = T_inverse @ new_coor
-            # Define new x
-            x = newarr[0].astype(int)
-            # Define new y
-            y = newarr[1].astype(int)
-            if 0 <= x < height and 0 <= y < width:
-                newimg[i, j] = im1[x, y]
-    plt.imshow(newimg)
+            newarr=np.round(newarr)
+            try:
+                newimg[int(newarr[0][0])][int(newarr[1][0])]=im2[i][j]
+            except Exception:
+                pass
+    # Displaying
+    f, ax = plt.subplots(1, 3)  # plot results
+    ax[0].imshow(im1)
+    ax[0].set_title("Image 1")
+    ax[1].imshow(newimg)
+    ax[1].set_title("Supposed Image 1")
+    ax[2].imshow(im2)
+    ax[2].set_title("Image 2")
     plt.show()
     return newimg
 
-
-    ###################################################
-    # # First channel will be the coordinates in x-axis
-    # # Second channel will be the coordinates in y-axis
-    #
-    # # Create 2 marrices in the same size
-    # Y_indices = np.zeros((height, width))
-    # X_indices = np.zeros((height, width))
-    # # For each pixel in image
-    # for j in range(0, height):
-    #     k = 0
-    #     for i in range(0, width):
-    #         Y_indices[i][j] = j # In Y_indices all columns will be:
-    #         #[[0,1],
-    #         #[0,1]]
-    #         X_indices[i][j] = k # In X_indices all columns will be:
-    #         #[[0,0],
-    #         #[1,1]]
-    #         k = k + 1
-    # # Create new martix of ones in the same size-third channel will be ones matrix
-    # ones_mat=np.ones((height,width))
-    #
-    # # Now we will create new 3D array where [X_indices,Y_indices,ones_mat] and shape is (rows,cols,3)
-    # x_y_one_mat=[X_indices,Y_indices,ones_mat]
-    # # Convert to np.array
-    # x_y_one_mat=np.array(x_y_one_mat)
-    # # Extract number of rows and cols
-    # rows,cols=x_y_one_mat.shape[:2]
-    # # Reshape it to (3,rows*cols) (page number 8)
-    # x_y_one_mat_reshape=np.reshape(x_y_one_mat, (3, rows*cols))
-
-
-#     # Display both image1 and the wrapped version of the image2 in the same figure
-#     plt.imshow(im1)
-#     plt.imshow(im2_wrapped)
-#     return im2_wrapped # Return warp image 2 according to T
-#
-#     pass
 
 
 # ---------------------------------------------------------------------------
@@ -358,13 +354,11 @@ def gaussianPyr(img: np.ndarray, levels: int = 4) -> List[np.ndarray]:
     # the presentation from tirgul
     # https://docs.opencv.org/3.4/d4/d1f/tutorial_pyramids.html
     pyramid_list = []  # initialize a list of all images in pyramid
-    # in case of RGB or grayscale image:
-    #############################################################
+
     hight, width = img.shape[:2]
     hight = (2 ** levels) * (hight // (2 ** levels))
     width = (2 ** levels) * (width // (2 ** levels))
-    # hight = (2**levels) * np.floor(hight / 2**levels).astype(np.uint8)#(hight // (2**levels))
-    #     width = (2**levels) * np.floor(width / 2**levels).astype(np.uint8)
+
     if img.ndim == 3:  # if image is RGB
         img = img[0:hight, 0:width, :]
     else:  # if image is grayscale
@@ -376,7 +370,8 @@ def gaussianPyr(img: np.ndarray, levels: int = 4) -> List[np.ndarray]:
 
     # by using pythons internal function 'getGaussianKernel', we will creates Gaussian kernel
     gaussian_kernel = cv2.getGaussianKernel(k_size, sigma)
-    # gaussian_kernel=gaussianKer(5)
+
+
     for i in range(1, levels):
         # blur the image with a Gaussian kernel
         # (by using pythons internal function 'filter2D', we will apply the gaussian_kernel on the last image in pyramid_list )
@@ -474,10 +469,10 @@ def gaussExpand(img: np.ndarray, gs_k: np.ndarray) -> np.ndarray:
     :return: Image from gaussian pyramid in level k-1 (i.e. the expend level)
     """
     gs_k = (gs_k / gs_k.sum()) * 4  # As we learned in class
-    if img.ndim == 3:
+    if img.ndim == 3: #In case of RGB
         hight, width, depth = img.shape[:3]
         zero_mat = np.zeros((2 * hight, 2 * width, depth))
-    else:
+    else: #In case of gray image
         hight, width = img.shape[:2]
         zero_mat = np.zeros((2 * hight, 2 * width))
     # Samples every second pixel
@@ -494,17 +489,12 @@ def cropSizeImage(img: np.ndarray, levels: int) -> np.ndarray:
     height = twoPowLevel * np.floor(height / twoPowLevel).astype(np.uint8)
     width = twoPowLevel * np.floor(width / twoPowLevel).astype(np.uint8)
 
-    if img.ndim == 3:
+    if img.ndim == 3: #In case of RGB img
         img = img[0:height, 0:width, :]
-    else:
+    else:#In case of gray img
         img = img[0:height, 0:width]
     return img
 
-
-# def gaussianKer(kernel_size: int) -> np.ndarray:
-#     gaussian = cv2.getGaussianKernel(kernel_size, -1)
-#     gaussian = gaussian.dot(gaussian.T)
-#     return gaussian
 
 def gaussianKer(kernel_size: int) -> np.ndarray:
     """
@@ -518,3 +508,98 @@ def gaussianKer(kernel_size: int) -> np.ndarray:
     gaussian_kernel = gaussian @ gaussian.T
     gaussian_kernel = gaussian_kernel / gaussian_kernel.sum()
     return gaussian_kernel
+
+def findUvalue(img: np.ndarray)-> int:
+    """
+    Function find all indexes of zeros colums and by that compute the u value from original image to image after translation.
+    (REMEMBER- translation can be change left or right,up or down)
+    :param img:Image array after translation
+    :return:u value
+    """
+    # We will take the size of the image
+    height, width = img.shape[:2]
+    # Define list of col indexes where there are colums of zeros
+    col_indexes = []
+    # Iterate over all pixels in image and find colums of zeoros
+    for j in range(0, width):
+        zero_col = True
+        for i in range(0, height):
+            # print("j:",j)
+            # print("i:",i)
+            # print ("mat[",i,"][",j,"]:",mat[i][j])
+            if img[i][j] != 0:  # if there is a value in column that is not zero
+                zero_col = False
+                break  # continue to next column
+            #print(zero_col)
+        if zero_col == True:
+            col_indexes.append(j)  # Add the index of zero column
+            #print("there is a col of zeros")
+    # Now we need to check if the change in X Axis was left or right
+    # Therefore we will check if the first col is in the list or the last col
+    u_abs_val = len(col_indexes)  # that will be the change in X axis, i.e. the u value
+    if u_abs_val != 0:  # if image moved in X axis
+        if 0 in col_indexes:  # if first col is zeros i.e., the image moved right
+            return(u_abs_val)  # we will return positive value of u
+        return(-u_abs_val)  # else, if first col not in the list , than the image moved left and we will return negavive value of u
+
+    return 0 # If image did not moved in X axis
+
+def findVvalue(img: np.ndarray)-> int:
+    """
+    Function find all indexes of zeros rows and by that compute the v value from original image to image after translation.
+    (REMEMBER- translation can be change left or right,up or down)
+    :param img:Image array after translation
+    :return:v value
+    """
+    # We will take the size of the image
+    height, width = img.shape[:2]
+    # Define list of row indexes where there are rows of zeros
+    row_indexes = []
+    # Iterate over all pixels in image and find rows of zeoros
+    for i in range(0, height):
+        zero_row = True
+        for j in range(0, width):
+            # print("j:",j)
+            # print("i:",i)
+            # print ("mat[",i,"][",j,"]:",mat[i][j])
+            if img[i][j] != 0:  # if there is a value in row that is not zero
+                zero_row = False
+                break  # continue to next row
+            #print(zero_row)
+        if zero_row == True:
+            row_indexes.append(i)  # Add the index of zero row
+            #print("there is a row of zeros")
+    # Now we need to check if the change in Y Axis was up or down
+    # Therefore we will check if the first row is in the list or the last row
+    v_abs_val = len(row_indexes)  # that will be the change in Y axis, i.e. the v value
+    if v_abs_val != 0:  # if image moved in Y axis
+        if 0 in row_indexes:  # if first row is zeros i.e., the image moved down
+            return(v_abs_val)  # we will return negavive value of V
+        return(-v_abs_val)  # else, if first row not in the list , than the image moved up and we will return positieve value of V
+
+    return 0 # If image did not moved in Y axis
+
+
+def findTheta(im1, im2):
+    """
+        Function find the appropirate teta to move im1 to get im2
+
+    :param im1: The original image
+    :param im2: Image after Rigid
+    :return: teta angle that appropiate the changes between images
+    """
+    # Define minimal error to be the biggest int value
+    minimal_error = float("inf")
+    teta = 0
+    # find the best teta by the minimal_error
+    for temp_teta in range(360):
+        tmp_t = np.array([[math.cos(temp_teta), -math.sin(temp_teta), 0],
+                          [math.sin(temp_teta), math.cos(temp_teta), 0],
+                          [0, 0, 1]], dtype=np.float64)
+        img_by_t = cv2.warpPerspective(im1, tmp_t, im1.shape[::-1])
+        temp_error = np.square(np.subtract(im2, img_by_t)).mean()
+        if temp_error < minimal_error:
+            minimal_error = temp_error
+            tran_mat = tmp_t
+            teta = temp_teta
+    return teta
