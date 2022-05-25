@@ -260,7 +260,15 @@ def translationlkDemo(img_path):
     print("MSE second img to the returned img: " + str(np.square(img2 - cv2.warpPerspective(img1, ans, img1.shape[::-1])).mean()))
     print("U,V Original: " + str("-2,-1"))
     print("U,V I get: " + str(ans[0][2]) + ", " + str(ans[1][2]) + "\n")
-
+    #now plot image
+    f, ax = plt.subplots(1, 3)
+    ax[0].imshow(img1)
+    ax[0].set_title("Image 1")
+    ax[2].imshow(img2)
+    ax[2].set_title("Image 2")
+    ax[1].imshow(cv2.warpPerspective(img1, ans, img1.shape[::-1]))
+    ax[1].set_title("Translated image")
+    plt.show()
 
 def translationCorrDemo(img_path):
     """
@@ -376,16 +384,16 @@ def main():
     # lkDemo(img_path) #work good Gray&RGB
     # hierarchicalkDemo(img_path) #work good Gray&RGB
     # compareLK(img_path)#work good Gray&RGB
-    imageWarpingDemo(img_path)
+    #imageWarpingDemo(img_path)
     # pyrGaussianDemo('input/pyr_bit.jpg')#work good Gray&RGB
     # pyrLaplacianDemo('input/pyr_bit.jpg')
     # blendDemo()
 
-    # translationlkDemo(img_path) #work good translation
+    translationlkDemo(img_path) #work good translation
     # rigidlkdemo(img_path) #work good rigid lk
     # rigidCorrdemo(img_path) #work good
     # translationCorrDemo(img_path) #work good
-
+###***Credit to photographer Daniel Appel
 
 if __name__ == '__main__':
     main()
